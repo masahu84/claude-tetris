@@ -1,0 +1,59 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    # Ignorar issues creados/editados por bots para evitar ruido y posibles bucles
+    if: github.event.issue.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # crear/asignar labels y publicar comentarios
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowed-tools "Bash(gh label:*),Bash(gh issue:*)"'
+          prompt: |
+            Eres un asistente de triaje de issues para este repositorio. Vas a analizar el
+            issue número ${{ github.event.issue.number }}. Realiza TODAS las tareas en español.
+
+            Pasos:
+            1. Lee el issue completo (título, cuerpo y comentarios existentes) con:
+               `gh issue view ${{ github.event.issue.number }} --comments`
+            2. Consulta los labels que ya existen en el repositorio con: `gh label list`.
+            3. Decide los labels apropiados para este issue:
+               - Tipo: elige entre `bug`, `enhancement`, `question` o `documentation` según
+                 corresponda.
+               - Prioridad (opcional): añade una etiqueta de prioridad si el issue lo justifica.
+               - Si algún label necesario NO existe, créalo con `gh label create "<nombre>"
+                 --description "<descripcion>" --color <hex>` y luego asígnalo.
+               - Asigna los labels con:
+                 `gh issue edit ${{ github.event.issue.number }} --add-label "<label1>,<label2>"`
+            4. Publica UN comentario con el diagnóstico general del problema usando
+               `gh issue comment ${{ github.event.issue.number }} --body "<texto>"`.
+               El diagnóstico debe estar en español y contener estas secciones en Markdown:
+               - **Resumen del problema**: qué se pide o qué falla, en 1-3 frases.
+               - **Causa probable / área afectada**: componentes, archivos o zonas del código
+                 del proyecto (un Tetris) que probablemente estén implicados.
+               - **Pasos sugeridos para la solución**: lista ordenada de acciones concretas que
+                 servirán de base para implementar la solución más adelante.
+            5. IMPORTANTE (para issues editados): antes de comentar, revisa los comentarios
+               existentes. Si ya publicaste antes un comentario de diagnóstico, NO lo dupliques;
+               en su lugar, limita tu acción a ajustar los labels si el enfoque del issue cambió.
+
+            No modifiques el título ni el cuerpo original del issue. Limítate a gestionar labels
+            y a publicar/ajustar el comentario de diagnóstico.
