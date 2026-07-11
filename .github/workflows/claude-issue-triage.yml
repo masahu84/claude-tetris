@@ -51,6 +51,11 @@ jobs:
                  del proyecto (un Tetris) que probablemente estén implicados.
                - **Pasos sugeridos para la solución**: lista ordenada de acciones concretas que
                  servirán de base para implementar la solución más adelante.
+               El comentario DEBE estar escrito en formato Markdown válido que GitHub pueda
+               renderizar correctamente (encabezados con `#`/`##`, listas con `-` o numeradas,
+               **negritas**, `código en línea` y bloques de código con ```` ``` ````,
+               enlaces `[texto](url)`, etc.). Asegúrate de usar saltos de línea reales entre
+               secciones y elementos para que el Markdown se muestre bien en GitHub.
             5. IMPORTANTE (para issues editados): antes de comentar, revisa los comentarios
                existentes. Si ya publicaste antes un comentario de diagnóstico, NO lo dupliques;
                en su lugar, limita tu acción a ajustar los labels si el enfoque del issue cambió.
