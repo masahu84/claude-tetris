@@ -16,6 +16,42 @@ const COLORS = [
   '#b0bec5', // Nut - metallic gray
 ];
 
+// Paletas alternativas por skin (índices alineados con COLORS)
+const NEON_COLORS = [
+  null,
+  '#00e5ff', // I
+  '#ffea00', // O
+  '#e040fb', // T
+  '#00e676', // S
+  '#ff1744', // Z
+  '#2979ff', // J
+  '#ff9100', // L
+  '#c0c0c0', // Nut
+];
+
+const PASTEL_COLORS = [
+  null,
+  '#a0e7e5', // I
+  '#fdffb6', // O
+  '#dcb0f2', // T
+  '#b9fbc0', // S
+  '#ffadad', // Z
+  '#a3c4f3', // J
+  '#ffd6a5', // L
+  '#d5d5e0', // Nut
+];
+
+// Cada skin define su paleta y flags que drawBlock interpreta.
+// canvasBg: fondo opcional del canvas (null = usa el CSS --board-bg).
+const SKINS = {
+  retro: { colors: COLORS, canvasBg: null },
+  neon: { colors: NEON_COLORS, glow: true, canvasBg: '#000000' },
+  pastel: { colors: PASTEL_COLORS, radius: 6, canvasBg: null },
+  pixel: { colors: COLORS, pixel: true, canvasBg: null },
+};
+
+let currentSkin = 'retro';
+
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -42,6 +78,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -63,6 +100,32 @@ themeToggle.addEventListener('change', () => {
 });
 
 initTheme();
+
+function applySkin(skin, redraw) {
+  currentSkin = SKINS[skin] ? skin : 'retro';
+  skinSelect.value = currentSkin;
+  const bg = SKINS[currentSkin].canvasBg;
+  // El fondo del canvas de la skin prima sobre el CSS del tema; null lo restablece.
+  canvas.style.background = bg || '';
+  nextCanvas.style.background = bg || '';
+  if (redraw) {
+    draw();
+    drawNext();
+  }
+}
+
+function initSkin() {
+  const saved = localStorage.getItem('tetris-skin');
+  applySkin(SKINS[saved] ? saved : 'retro', false);
+}
+
+skinSelect.addEventListener('change', () => {
+  const skin = skinSelect.value;
+  localStorage.setItem('tetris-skin', skin);
+  applySkin(skin, true);
+});
+
+initSkin();
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -180,14 +243,63 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  const skin = SKINS[currentSkin];
+  const color = skin.colors[colorIndex];
+  const px = x * size + 1;
+  const py = y * size + 1;
+  const w = size - 2;
+
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+
+  // Neón: glow con sombra en canvas.
+  if (skin.glow) {
+    context.shadowBlur = 14;
+    context.shadowColor = color;
+  }
+
+  if (skin.radius) {
+    // Pastel: bordes redondeados simulados.
+    roundRect(context, px, py, w, w, skin.radius);
+    context.fill();
+  } else {
+    context.fillRect(px, py, w, w);
+  }
+
+  // Desactivar sombra antes de dibujar detalles internos.
+  if (skin.glow) context.shadowBlur = 0;
+
+  if (skin.pixel) {
+    // Pixel art: patrón de textura de 2x2 celdas sobre el bloque.
+    const cell = w / 4;
+    context.fillStyle = 'rgba(0,0,0,0.18)';
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if ((r + c) % 2 === 0) {
+          context.fillRect(px + c * cell, py + r * cell, cell, cell);
+        }
+      }
+    }
+  }
+
+  // Highlight superior (se omite en pixel art para no romper la textura).
+  if (!skin.pixel) {
+    context.fillStyle = 'rgba(255,255,255,0.12)';
+    context.fillRect(px, py, w, 4);
+  }
+
   context.globalAlpha = 1;
+}
+
+function roundRect(context, x, y, w, h, r) {
+  const rad = Math.min(r, w / 2, h / 2);
+  context.beginPath();
+  context.moveTo(x + rad, y);
+  context.arcTo(x + w, y, x + w, y + h, rad);
+  context.arcTo(x + w, y + h, x, y + h, rad);
+  context.arcTo(x, y + h, x, y, rad);
+  context.arcTo(x, y, x + w, y, rad);
+  context.closePath();
 }
 
 function drawGrid() {

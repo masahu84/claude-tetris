@@ -176,6 +176,24 @@ body {
   transition: background 0.2s, border-color 0.2s;
 }
 
+/* ---- Selector de skin ---- */
+.skin-select {
+  background: var(--kbd-bg);
+  color: var(--fg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.skin-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
