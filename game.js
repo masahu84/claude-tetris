@@ -43,7 +43,34 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
 
+const pauseOverlay = document.getElementById('pause-overlay');
+const pauseMain = document.getElementById('pause-main');
+const pauseControls = document.getElementById('pause-controls');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const controlsBtn = document.getElementById('controls-btn');
+const controlsBackBtn = document.getElementById('controls-back-btn');
+const startLevelInput = document.getElementById('start-level');
+const levelMinusBtn = document.getElementById('level-minus');
+const levelPlusBtn = document.getElementById('level-plus');
+
+const MIN_LEVEL = 1;
+const MAX_LEVEL = 20;
+
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+
+function getStartLevel() {
+  const saved = parseInt(localStorage.getItem('tetris-start-level'), 10);
+  if (!Number.isFinite(saved)) return MIN_LEVEL;
+  return Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, saved));
+}
+
+function setStartLevel(value) {
+  const clamped = Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, value));
+  localStorage.setItem('tetris-start-level', String(clamped));
+  startLevelInput.value = clamped;
+  return clamped;
+}
 
 function applyTheme(theme, redraw) {
   document.body.classList.toggle('light-theme', theme === 'light');
@@ -248,17 +275,31 @@ function endGame() {
   overlay.classList.remove('hidden');
 }
 
+function showPauseMain() {
+  pauseControls.classList.add('hidden');
+  pauseMain.classList.remove('hidden');
+}
+
+function openPause() {
+  cancelAnimationFrame(animId);
+  showPauseMain();
+  startLevelInput.value = getStartLevel();
+  pauseOverlay.classList.remove('hidden');
+}
+
+function closePause() {
+  pauseOverlay.classList.add('hidden');
+  lastTime = performance.now();
+  loop(lastTime);
+}
+
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
-  if (!paused) {
-    lastTime = performance.now();
-    loop(lastTime);
+  if (paused) {
+    openPause();
   } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    closePause();
   }
 }
 
@@ -283,22 +324,27 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = getStartLevel();
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseOverlay.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    e.preventDefault();
+    togglePause();
+    return;
+  }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -323,5 +369,41 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+// ---- Menú de pausa ----
+resumeBtn.addEventListener('click', () => togglePause());
+
+pauseRestartBtn.addEventListener('click', () => {
+  paused = false;
+  init();
+});
+
+controlsBtn.addEventListener('click', () => {
+  pauseMain.classList.add('hidden');
+  pauseControls.classList.remove('hidden');
+});
+
+controlsBackBtn.addEventListener('click', showPauseMain);
+
+levelMinusBtn.addEventListener('click', () => {
+  setStartLevel(getStartLevel() - 1);
+});
+
+levelPlusBtn.addEventListener('click', () => {
+  setStartLevel(getStartLevel() + 1);
+});
+
+startLevelInput.addEventListener('change', () => {
+  const value = parseInt(startLevelInput.value, 10);
+  setStartLevel(Number.isFinite(value) ? value : MIN_LEVEL);
+});
+
+// Evita que las teclas dentro del menú (p.ej. flechas en el input) lleguen al juego
+pauseOverlay.addEventListener('keydown', e => {
+  if (e.code === 'Escape' || e.code === 'KeyP') return; // permitir togglePause global
+  e.stopPropagation();
+});
+
+startLevelInput.value = getStartLevel();
 
 init();
