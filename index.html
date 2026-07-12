@@ -35,6 +35,11 @@
         </div>
 
         <div class="panel-section">
+          <span class="label">COMBO</span>
+          <span class="value" id="combo">0</span>
+        </div>
+
+        <div class="panel-section">
           <span class="label">NEXT</span>
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
@@ -49,6 +54,12 @@
             <li><kbd>P</kbd> pausa</li>
           </ul>
         </div>
+
+        <div class="panel-section highscores-section">
+          <span class="label">RECORDS</span>
+          <div class="highscores-body"></div>
+          <button id="reset-scores-btn" class="reset-scores-btn">Resetear records</button>
+        </div>
       </aside>
     </div>
 
@@ -56,6 +67,17 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+
+        <form id="name-form" class="name-form hidden">
+          <label for="name-input">¡Nuevo record! Escribe tu nombre:</label>
+          <div class="name-form-row">
+            <input type="text" id="name-input" maxlength="12" autocomplete="off" placeholder="Nombre" />
+            <button type="submit">Guardar</button>
+          </div>
+        </form>
+
+        <div class="overlay-highscores highscores-body"></div>
+
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>
